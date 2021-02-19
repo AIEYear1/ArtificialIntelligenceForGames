@@ -13,16 +13,16 @@ namespace SimpleAI
         public float maxForce = 5f;
 
         Agent agent;
-        public Agent Agent { get => agent; }
+        //public Agent Agent { get => agent; }
 
-        List<SteeringBehavior> steerings = new List<SteeringBehavior>();
+        readonly List<SteeringBehavior> steerings = new List<SteeringBehavior>();
 
         private void Awake()
         {
             agent = GetComponent<Agent>();
 
-            steerings.Add(new SeekSteering { target = seekTarget });
-            steerings.Add(new WanderSteering { target = seekTarget, radius = .15f, jitter = .1f, headingDistance = 20 });
+            steerings.Add(new PursueSteering { target = seekTarget });
+            //steerings.Add(new WanderSteering { target = seekTarget, radius = .15f, jitter = .1f, headingDistance = 20 });
         }
 
         private void Update()

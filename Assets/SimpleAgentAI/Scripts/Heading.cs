@@ -2,27 +2,30 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class Heading
+namespace SimpleAI
 {
-    public Transform transform;
-    private Vector3 prevPos;
-
-    Heading(Transform transform)
+    public class Heading
     {
-        this.transform = transform;
-        prevPos = transform.position;
-    }
+        public Transform transform;
+        private Vector3 prevPos;
 
-    public Vector3 GetHeading()
-    {
-        Vector3 toReturn = prevPos - transform.position;
-        prevPos = transform.position;
+        Heading(Transform transform)
+        {
+            this.transform = transform;
+            prevPos = transform.position;
+        }
 
-        return toReturn;
-    }
+        public Vector3 GetHeading()
+        {
+            Vector3 toReturn = transform.position - prevPos;
+            prevPos = transform.position;
 
-    public static implicit operator Heading(Transform transform)
-    {
-        return new Heading(transform);
+            return toReturn;
+        }
+
+        public static implicit operator Heading(Transform transform)
+        {
+            return new Heading(transform);
+        }
     }
 }
