@@ -3,119 +3,139 @@ using UnityEngine.AI;
 
 public class Agent : MonoBehaviour
 {
-    public Transform target = null;
+    public enum State { STOP, MOVE, JUMP }
+
+    #region Variables
+    public Transform[] target;
     [Space(10)]
-    public bool isHostile = true;
+    public float stoppingDistance = 1f;
     [Space(10)]
-    public float stoppingDistance = 1;
-    public float range = 1.5f;
-    public Timer attackDelay = new Timer(1);
+    public float jumpSpread = 0f;
+    public float gravity = 20f;
 
     NavMeshAgent agent = null;
+    Rigidbody rb = null;
 
     float dist = float.MaxValue;
+    public int curTarget = 0;
+
+    State curState = State.MOVE;
+
+    bool jumpStarted = false;
+    Vector3 vel = new Vector3();
+    #endregion
 
     void Start()
     {
         agent = GetComponent<NavMeshAgent>();
-        attackDelay.Reset(attackDelay.Delay);
+        rb = GetComponent<Rigidbody>();
     }
 
     void Update()
     {
-        Move();
-        Attack();
-    }
-
-    /// <summary>
-    /// Manages agent attacking
-    /// </summary>
-    void Attack()
-    {
-        if (isHostile && (attackDelay.Check(false) && dist < range))
+        switch (curState)
         {
-            attackDelay.Reset();
-            print("ATTACK!");
+            case State.STOP:
+                break;
+            case State.MOVE:
+                Move();
+                break;
+            case State.JUMP:
+                Jump();
+                break;
         }
     }
 
-    /// <summary>
-    /// Manages agent movement
-    /// </summary>
     void Move()
     {
-        dist = Vector3.Distance(transform.position, target.position);
+        dist = Vector3.Distance(transform.position, target[curTarget].position);
 
         if (dist > stoppingDistance)
         {
-            agent.destination = target.position;
+            agent.destination = target[curTarget].position;
+
+            if(agent.pathStatus == NavMeshPathStatus.PathPartial)
+            {
+                --curTarget;
+                if (curTarget < 0)
+                    curTarget = 0;
+            }
+
             return;
         }
 
         if (dist <= stoppingDistance)
         {
-            agent.destination = target.position + ((transform.position - target.position).normalized * stoppingDistance);
-            return;
+            agent.destination = target[curTarget].position + ((transform.position - target[curTarget].position).normalized * stoppingDistance);
+
+            if (curTarget == target.Length-1)
+            {
+                // TODO: GAMEOVER HERE
+
+                agent.isStopped = true;
+                curState = State.STOP;
+
+                return;
+            }
+
+            agent.enabled = false;
+            curState = State.JUMP;
         }
     }
 
-    // Idon't know why this is here but it is now
-    void BubbleV2()
+    void Jump()
     {
-        string output = "";
-
-        int[] randomMagic = new int[10];
-
-        for (int x = 0; x < 10; x++)
-            randomMagic[x] = Random.Range(1, 120);
-
-        for (int x = 0; x < 10; x++)
-            output += randomMagic[x] + "\n";
-
-        output += "\n\n";
-
-        bool swapped = true;
-        int iteration = 0;
-
-        while (swapped)
+        if (!jumpStarted)
         {
-            swapped = false;
+            vel = target[curTarget].GetComponent<Node>().jumpDirection;
 
-            for (int x = 0; x < randomMagic.Length - iteration - 1; x++)
-            {
-                if (randomMagic[x] > randomMagic[x + 1])
-                {
-                    int tmpItem = randomMagic[x + 1];
-                    randomMagic[x + 1] = randomMagic[x];
-                    randomMagic[x] = tmpItem;
+            if(jumpSpread != 0)
+                vel += new Vector3(Random.Range(-1f, 1f), -.5f * Random.value, -.5f * Random.value) * jumpSpread;
 
-                    swapped = true;
-                }
-            }
+            vel = target[curTarget].rotation * vel;
 
-            if (!swapped)
-                break;
-
-            swapped = false;
-
-            for (int x = randomMagic.Length - 1; x > 0 + iteration; x--)
-            {
-                if (randomMagic[x] < randomMagic[x - 1])
-                {
-                    int tmpItem = randomMagic[x - 1];
-                    randomMagic[x - 1] = randomMagic[x];
-                    randomMagic[x] = tmpItem;
-
-                    swapped = true;
-                }
-            }
-
-            iteration++;
         }
 
-        for (int x = 0; x < 10; x++)
-            output += randomMagic[x] + "\n";
+        vel.y -= gravity * Time.deltaTime;
+        rb.velocity = vel;
 
-        print(output);
+        if (jumpStarted && IsGrounded())
+        {
+            jumpStarted = false;
+            rb.velocity = Vector3.zero;
+
+            agent.enabled = true;
+
+            ++curTarget;
+
+            //NavMeshPath path = new NavMeshPath();
+            //NavMesh.CalculatePath(transform.position, target[curTarget].position, agent.areaMask, path);
+            //print(path.status);
+            //while (path.status != NavMeshPathStatus.PathComplete)
+            //{
+            //    --curTarget;
+
+            //    if (curTarget < 0)
+            //    {
+            //        curTarget = 0;
+            //        break;
+            //    }
+
+            //    NavMesh.CalculatePath(transform.position, target[curTarget].position, agent.areaMask, path);
+            //}
+
+            curState = State.MOVE;
+            return;
+        }
+        jumpStarted = true;
+    }
+
+    /// <summary>
+    /// Determines if the player is standing on something
+    /// </summary>
+    /// <returns>returns true if the player is standing on something</returns>
+    bool IsGrounded()
+    {
+        return Physics.Raycast(transform.position, Vector3.down, agent.height / 1.9f);
     }
 }
