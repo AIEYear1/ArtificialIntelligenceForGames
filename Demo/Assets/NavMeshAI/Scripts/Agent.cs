@@ -54,7 +54,7 @@ public class Agent : MonoBehaviour
         {
             agent.destination = target[curTarget].position;
 
-            if(agent.pathStatus == NavMeshPathStatus.PathPartial)
+            if(agent.pathStatus != NavMeshPathStatus.PathComplete)
             {
                 --curTarget;
                 if (curTarget < 0)
