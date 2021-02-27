@@ -5,16 +5,19 @@ using UnityEngine;
 public class Wrecker : MonoBehaviour
 {
     [SerializeField]
-    float maxSpeed = 30f;
+    [Range(0.1f, 10.0f)]
+    float maxSpeed = 5.0f;
     [SerializeField]
-    float minSpeed = 2f;
+    [Range(0.1f, 10.0f)]
+    float minSpeed = 0.1f;
     [Space(10)]
-    public float maxAngle = 0;
+    [SerializeField]
+    float maxAngle = 40;
     [Space(10)]
     [SerializeField]
     bool goingTowardsEdge1 = true;
 
-    public float curSpeed = 0;
+    float curSpeed = 0;
 
     bool hasHitZero = false;
 
@@ -22,15 +25,14 @@ public class Wrecker : MonoBehaviour
     private void FixedUpdate()
     {
         float angle = Vector3.Angle(transform.up, Vector3.up) / maxAngle;
-        print(angle);
-        // TODO: Needs Fixing
+
         if (goingTowardsEdge1)
         {
             curSpeed = Mathf.Lerp(maxSpeed, minSpeed, angle);
             transform.rotation = Quaternion.RotateTowards(transform.rotation, Quaternion.LookRotation(transform.forward, transform.right), curSpeed);
 
             if (!hasHitZero)
-                hasHitZero = angle < .1f;
+                hasHitZero = angle < 1.0f;
             else if (angle >= 1)
             {
                 goingTowardsEdge1 = false;
