@@ -15,7 +15,7 @@ public class TrapDoor : MonoBehaviour
         float curTraps = 0;
         for (int x = 0; curTraps < numOfTraps; ++x)
         {
-            if (x >= transform.childCount)
+            if (x >= transform.childCount - 1) 
                 x = 0;
 
             if (!transform.GetChild(x).GetComponent<BoxCollider>().enabled || Random.value > probabilityOfTrap)

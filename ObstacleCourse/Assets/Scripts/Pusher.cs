@@ -11,7 +11,8 @@ public class Pusher : MonoBehaviour
 
     Vector3 pos = new Vector3();
     Timer mover = new Timer();
-    Timer stall = new Timer();
+    [HideInInspector]
+    public Timer stall = new Timer();
 
     private void Start()
     {

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-public class objectNode : NavNode
+public class ObjectNode : NavNode
 {
     public Transform obj;
 }

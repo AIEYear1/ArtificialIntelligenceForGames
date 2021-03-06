@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
-
+// TODO: Code up everything for Paddle puzzle, likely use Navmesh calc path then rigid body move across that path or use object nodes
 public enum AIDifficulty { Beginner, Intermediate, Expert }
 public class Agent : MonoBehaviour
 {
@@ -17,12 +17,12 @@ public class Agent : MonoBehaviour
     [Space(10)]
     public float speed = 10f;
     public float jumpForce = 7f;
-    public float jumpSpread = 0f;
+    public float imperfection = 0f;
     public float gravity = 20f;
 
-    public Queue<Node> path = new Queue<Node>();
+    Queue<Node> path = new Queue<Node>();
 
-    public Node target = null;
+    Node target = null;
 
     NavMeshAgent agent = null;
     Rigidbody rb = null;
@@ -32,8 +32,10 @@ public class Agent : MonoBehaviour
 
     public State curState = State.MOVETOOBSTACLE;
 
-    bool jumpStarted = false;
     Vector3 vel = new Vector3();
+
+    public bool obstacleBool = false;
+    Transform obstacleObj = null;
     #endregion
 
     void Start()
@@ -59,10 +61,13 @@ public class Agent : MonoBehaviour
                 Skinny();
                 break;
             case State.PUSHER:
+                Pusher();
                 break;
             case State.TRAPDOOR:
+                TrapDoor();
                 break;
             case State.WRECKER:
+                Wrecker();
                 break;
         }
     }
@@ -81,11 +86,8 @@ public class Agent : MonoBehaviour
             //    if (curObstacle < 0)
             //        curObstacle = 0;
             //}
-
-            return;
         }
-
-        if (dist <= stoppingDistance)
+        else
         {
             agent.destination = target.transform.position + ((transform.position - target.transform.position).normalized * stoppingDistance);
 
@@ -106,14 +108,12 @@ public class Agent : MonoBehaviour
 
     void Jump()
     {
-        if (!jumpStarted)
+        // only apply set jump velocity when obstacle bool is false
+        if (!obstacleBool)
         {
-            //float jForceMod = Vector3.Distance(target.transform.position, ((DijkNode)path.Peek()).transform.position) / (speed * 0.65f);
-
-            //vel = new Vector3(Random.Range(-1f, 1f) * jumpSpread, jumpForce, speed * jForceMod);
             float jForceMod = Vector3.Distance(transform.position, target.transform.position) / (speed * 0.65f);
 
-            vel = new Vector3(Random.Range(-1f, 1f) * jumpSpread, jumpForce, speed * jForceMod);
+            vel = new Vector3(Random.Range(-1f, 1f) * imperfection, jumpForce, speed * jForceMod);
 
             vel = Quaternion.LookRotation(target.transform.position - transform.position, Vector3.up) * vel;
         }
@@ -121,14 +121,14 @@ public class Agent : MonoBehaviour
         vel.y -= gravity * Time.deltaTime;
         rb.velocity = vel;
 
-        if(jumpStarted && IsGrounded())
+        if(obstacleBool && IsGrounded())
         {
-            jumpStarted = false;
+            obstacleBool = false;
             rb.velocity = Vector3.zero;
 
             if(transform.position.y < -1)
             {
-                print("failed");
+                print("Jump failed");
 
                 target = baseNodes[curObstacle];
                 rb.isKinematic = true;
@@ -139,7 +139,7 @@ public class Agent : MonoBehaviour
 
             if (path.Count == 0)
             {
-                print("finished");
+                print("Jump finished");
 
                 target = baseNodes[++curObstacle];
                 rb.isKinematic = true;
@@ -153,14 +153,242 @@ public class Agent : MonoBehaviour
             return;
         }
 
-        jumpStarted = true;
+        obstacleBool = true;
     }
 
     void Skinny()
     {
         dist = Vector3.Distance(transform.position, target.transform.position);
 
+        if (IsGrounded())
+        {
+            if(transform.position.y < -1)
+            {
+                print("Skinny failed");
 
+                rb.velocity = Vector3.zero;
+                target = baseNodes[curObstacle];
+                rb.isKinematic = true;
+                agent.enabled = true;
+                curState = State.MOVETOOBSTACLE;
+                return;
+            }
+
+            if(dist > stoppingDistance)
+            {
+                vel = new Vector3(Random.Range(-.5f, .5f) * imperfection, 0, speed * Mathf.Clamp(dist / (speed * .3f), stoppingDistance, 1f));
+
+                vel = Quaternion.LookRotation(target.transform.position - transform.position, Vector3.up) * vel;
+            }
+            else
+            {
+                vel = Vector3.zero;
+
+                if (path.Count == 0)
+                {
+                    print("Skinny finished");
+
+                    rb.velocity = vel;
+
+                    target = baseNodes[++curObstacle];
+                    rb.isKinematic = true;
+                    agent.enabled = true;
+                    curState = State.MOVETOOBSTACLE;
+                    return;
+                }
+
+                target = path.Dequeue();
+            }
+        }
+        else
+        {
+            vel.y -= gravity * Time.deltaTime;
+        }
+
+        rb.velocity = vel;
+    }
+
+    void Pusher()
+    {
+        // only move when obstaclebool is true
+        obstacleBool = !(target is ObjectNode node) || (Mathf.Abs(node.obj.position.x) == 7 && node.obj.GetComponent<Pusher>().stall.IsComplete(false)) | obstacleBool;
+        print(obstacleBool);
+        if (IsGrounded())
+        {
+            if (transform.position.y < -1)
+            {
+                print("Pusher failed");
+
+                obstacleObj = null;
+
+                rb.velocity = Vector3.zero;
+                target = baseNodes[curObstacle];
+                rb.isKinematic = true;
+                agent.enabled = true;
+                curState = State.MOVETOOBSTACLE;
+                return;
+            }
+
+            if (obstacleBool)
+            {
+                vel = target.transform.position - ((obstacleObj == null) ? transform.position : obstacleObj.position);
+
+                vel.Normalize();
+                vel *= speed;
+
+                if ((!(target is ObjectNode) && Vector3.Distance(target.transform.position, transform.position) < stoppingDistance) || target.transform.position.z < transform.position.z + stoppingDistance)
+                {
+                    vel = Vector3.zero;
+                    obstacleBool = false;
+
+                    if (path.Count == 0)
+                    {
+                        print("Pusher finished");
+
+                        rb.velocity = vel;
+
+                        target = baseNodes[++curObstacle];
+                        rb.isKinematic = true;
+                        agent.enabled = true;
+                        curState = State.MOVETOOBSTACLE;
+                        return;
+                    }
+
+                    obstacleObj = target.transform;
+                    target = path.Dequeue();
+                }
+            }
+            else
+            {
+                vel = Vector3.zero;
+            }
+        }
+        else
+        {
+            vel.y -= gravity * Time.deltaTime;
+        }
+
+        rb.velocity = vel;
+    }
+
+    void TrapDoor()
+    {
+        dist = Vector3.Distance(transform.position, target.transform.position);
+
+        if (IsGrounded())
+        {
+            if (transform.position.y < -1)
+            {
+                print("Trap failed");
+
+                rb.velocity = Vector3.zero;
+                target = baseNodes[curObstacle];
+                rb.isKinematic = true;
+                agent.enabled = true;
+                curState = State.MOVETOOBSTACLE;
+                return;
+            }
+
+            if (dist > stoppingDistance)
+            {
+                vel = target.transform.position - transform.position;
+                vel.Normalize();
+                vel *= speed;
+            }
+            else
+            {
+                vel = Vector3.zero;
+
+                if (path.Count == 0)
+                {
+                    print("Trap finished");
+
+                    rb.velocity = vel;
+
+                    target = baseNodes[++curObstacle];
+                    rb.isKinematic = true;
+                    agent.enabled = true;
+                    curState = State.MOVETOOBSTACLE;
+                    return;
+                }
+
+                target = path.Dequeue();
+            }
+        }
+        else
+        {
+            vel.y -= gravity * Time.deltaTime;
+
+            if (transform.position.y < -1 && Random.value < .5f + (.5f * ((float)difficulty / 2f))) 
+            {
+                (target as DijkNode).locked = true;
+            }
+        }
+
+        rb.velocity = vel;
+    }
+
+    void Wrecker()
+    {
+        dist = Vector3.Distance(transform.position, target.transform.position);
+        // only move when obstaclebool is true
+        obstacleBool = !(target is ObjectNode node) || (Mathf.Abs(node.obj.rotation.z) < 7) | obstacleBool;
+        print(obstacleBool);
+        if (IsGrounded())
+        {
+            if (transform.position.y < -1)
+            {
+                print("Wrecker failed");
+
+                rb.velocity = Vector3.zero;
+                target = baseNodes[curObstacle];
+                rb.isKinematic = true;
+                agent.enabled = true;
+                curState = State.MOVETOOBSTACLE;
+                return;
+            }
+
+            if (obstacleBool)
+            {
+                if (dist > stoppingDistance)
+                {
+                    vel = new Vector3(Random.Range(-.25f, .25f) * imperfection, 0, speed * Mathf.Clamp(dist / (speed * .3f), stoppingDistance, 1f));
+
+                    vel = Quaternion.LookRotation(target.transform.position - transform.position, Vector3.up) * vel;
+                }
+                else
+                {
+                    vel = Vector3.zero;
+                    obstacleBool = false;
+
+                    if (path.Count == 0)
+                    {
+                        print("Pusher finished");
+
+                        rb.velocity = vel;
+
+                        target = baseNodes[++curObstacle];
+                        rb.isKinematic = true;
+                        agent.enabled = true;
+                        curState = State.MOVETOOBSTACLE;
+                        return;
+                    }
+
+                    obstacleObj = target.transform;
+                    target = path.Dequeue();
+                }
+            }
+            else
+            {
+                vel = Vector3.zero;
+            }
+        }
+        else
+        {
+            vel.y -= gravity * Time.deltaTime;
+        }
+
+        rb.velocity = vel;
     }
 
     private void OnDrawGizmos()

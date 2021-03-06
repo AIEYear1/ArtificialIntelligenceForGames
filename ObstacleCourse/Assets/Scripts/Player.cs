@@ -35,6 +35,8 @@ public class Player : MonoBehaviour
     {
         grounded = IsGrounded();
         jump = grounded && (Input.GetKeyDown(KeyCode.Space) | jump);
+
+        //print(Vector3.Angle(Vector3.forward, transform.forward));
     }
 
     void FixedUpdate()
