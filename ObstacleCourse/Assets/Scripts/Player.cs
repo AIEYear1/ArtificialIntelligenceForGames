@@ -15,6 +15,9 @@ public class Player : MonoBehaviour
     public float LookSpeed = .01f;
     public float maximumY = 70, minimumY = -70;
     public float smoothing = 2.0f;
+    [Space(10)]
+
+    public bool locked = false;
 
     Rigidbody rb;
     Vector3 vel = new Vector3();
@@ -35,12 +38,14 @@ public class Player : MonoBehaviour
     {
         grounded = IsGrounded();
         jump = grounded && (Input.GetKeyDown(KeyCode.Space) | jump);
-
         //print(Vector3.Angle(Vector3.forward, transform.forward));
     }
 
     void FixedUpdate()
     {
+        if (locked)
+            return;
+
         // get mouse input
         md.x = Input.GetAxisRaw("Mouse X");
         md.y = Input.GetAxisRaw("Mouse Y");
