@@ -111,7 +111,6 @@ public class Agent : MonoBehaviour
 
     void Jump()
     {
-        print(obstacleBool);
         // only apply set jump velocity when obstacle bool is false
         if (!obstacleBool && obstacleTimer.Check(false))
         {
@@ -225,7 +224,7 @@ public class Agent : MonoBehaviour
     {
         // only move when obstaclebool is true
         obstacleBool = !(target is ObjectNode node) || (Mathf.Abs(node.obj.position.x) == 7 && node.obj.GetComponent<Pusher>().stall.PercentComplete > .8f) | obstacleBool;
-        print(obstacleBool);
+
         if (IsGrounded())
         {
             if (transform.position.y < -1)
@@ -385,7 +384,7 @@ public class Agent : MonoBehaviour
         {
             vel.y -= gravity * Time.deltaTime;
 
-            if (transform.position.y < -1 && Random.value < .5f + (.5f * ((float)difficulty / 2f)))
+            if (transform.position.y < -1 && Random.value < .34f + (.33f * (float)difficulty))
             {
                 (target as DijkNode).locked = true;
             }
@@ -399,7 +398,7 @@ public class Agent : MonoBehaviour
         dist = Vector3.Distance(transform.position, target.transform.position);
         // only move when obstaclebool is true
         obstacleBool = !(target is ObjectNode node) || (Mathf.Abs(node.obj.rotation.z) < 7) | obstacleBool;
-        print(obstacleBool);
+
         if (IsGrounded())
         {
             if (transform.position.y < -1)
@@ -496,6 +495,10 @@ public class Agent : MonoBehaviour
                 path.Enqueue(node.nextNode[0]);
                 break;
             case 4: // Trap
+                for (int x = 0; x < node.nextNode.Length; ++x)
+                {
+                    (node.nextNode[x] as DijkNode).prevNode = null;
+                }
                 path = CalculatePath((DijkNode)node.nextNode[0], (DijkNode)node.nextNode[node.nextNode.Length - 1]);
                 break;
             case 5: // Wrecker
@@ -506,6 +509,9 @@ public class Agent : MonoBehaviour
                 }
                 break;
         }
+
+        if (path == null)
+            return;
 
         target = path.Dequeue();
     }
@@ -615,23 +621,23 @@ public class Agent : MonoBehaviour
     {
         switch (difficulty)
         {
-            case AIDifficulty.Beginner:
-                difficulty = AIDifficulty.Intermediate;
-                speed = 9f;
-                agent.speed = 9f;
-                imperfection = 2.5f;
-                break;
-            case AIDifficulty.Intermediate:
-                difficulty = AIDifficulty.Expert;
-                speed = 10f;
-                agent.speed = 10f;
-                imperfection = 2f;
-                break;
             case AIDifficulty.Expert:
                 difficulty = AIDifficulty.Beginner;
                 speed = 8f;
                 agent.speed = 8f;
-                imperfection = 2.6f;
+                imperfection = 2.5f;
+                break;
+            case AIDifficulty.Beginner:
+                difficulty = AIDifficulty.Intermediate;
+                speed = 10f;
+                agent.speed = 10f;
+                imperfection = 2f;
+                break;
+            case AIDifficulty.Intermediate:
+                difficulty = AIDifficulty.Expert;
+                speed = 12f;
+                agent.speed = 12f;
+                imperfection = .5f;
                 break;
         }
     }

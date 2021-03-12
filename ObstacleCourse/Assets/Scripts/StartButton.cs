@@ -1,11 +1,9 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class StartButton : MonoBehaviour
 {
     public UITween tweener = null;
-    
+
     public GameObject startMenu = null;
     public GameObject mainOverlay = null;
 
@@ -16,5 +14,6 @@ public class StartButton : MonoBehaviour
         tweener.Close(startMenu, startCamera, mainOverlay);
 
         Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
     }
 }

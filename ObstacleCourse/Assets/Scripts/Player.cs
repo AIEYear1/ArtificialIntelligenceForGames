@@ -55,7 +55,7 @@ public class Player : MonoBehaviour
         // incrementally add to the camera look
         mouseLook += smoothV * LookSpeed;
 
-        // lock mouse look on the y access
+        // lock mouse look on the y axis
         if (mouseLook.y > maximumY) mouseLook.y = maximumY;
         if (mouseLook.y < minimumY) mouseLook.y = minimumY;
 

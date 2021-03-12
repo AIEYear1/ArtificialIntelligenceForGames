@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class UITween : MonoBehaviour
 {
@@ -32,13 +30,12 @@ public class UITween : MonoBehaviour
         cam = relatedCam;
         overlay = mainOverlay;
 
-        print(elements.Length - 1);
         for (int x = 0; x < elements.Length; ++x)
         {
-            if(x == 0)
-                LeanTween.scale(elements[x], Vector3.zero, speed).setDelay(delay * (elements.Length - 1 - x)).setOnComplete(End);
+            if (x == 0)
+                LeanTween.scale(elements[x], Vector3.zero, speed).setDelay((delay / 2) * (elements.Length - 1 - x)).setOnComplete(End);
             else
-                LeanTween.scale(elements[x], Vector3.zero, speed).setDelay(delay * (elements.Length - 1 - x));
+                LeanTween.scale(elements[x], Vector3.zero, speed).setDelay((delay / 2) * (elements.Length - 1 - x));
         }
     }
     public void End()

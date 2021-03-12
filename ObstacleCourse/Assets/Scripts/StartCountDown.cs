@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 
 public class StartCountDown : MonoBehaviour
@@ -28,7 +26,7 @@ public class StartCountDown : MonoBehaviour
 
         --index;
 
-        if(index <= 0)
+        if (index <= 0)
         {
             crosshair.SetActive(true);
             player.locked = false;

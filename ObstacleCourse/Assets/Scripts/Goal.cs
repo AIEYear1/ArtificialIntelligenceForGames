@@ -11,6 +11,7 @@ public class Goal : MonoBehaviour
     private void OnTriggerEnter(Collider other)
     {
         Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
         endText.text = other.name + " Wins";
 
         mainOverlay.SetActive(false);
