@@ -1,12 +1,11 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 // TODO: Code up everything for Paddle puzzle, likely use Navmesh calc path then rigid body move across that path or use object nodes
 public enum AIDifficulty { Beginner, Intermediate, Expert }
 public class Agent : MonoBehaviour
 {
-    public enum State { STOP, MOVETOOBSTACLE, JUMP, SKINNY, PUSHER, TRAPDOOR, WRECKER }
+    public enum State { STOP, MOVETOOBSTACLE, JUMP, SKINNY, PUSHER, PADDLE, TRAPDOOR, WRECKER }
 
     #region Variables
     public AIDifficulty difficulty = AIDifficulty.Beginner;
@@ -36,6 +35,7 @@ public class Agent : MonoBehaviour
 
     public bool obstacleBool = false;
     Transform obstacleObj = null;
+    Timer obstacleTimer = new Timer();
     #endregion
 
     void Start()
@@ -62,6 +62,9 @@ public class Agent : MonoBehaviour
                 break;
             case State.PUSHER:
                 Pusher();
+                break;
+            case State.PADDLE:
+                Paddle();
                 break;
             case State.TRAPDOOR:
                 TrapDoor();
@@ -91,7 +94,7 @@ public class Agent : MonoBehaviour
         {
             agent.destination = target.transform.position + ((transform.position - target.transform.position).normalized * stoppingDistance);
 
-            if (curObstacle == baseNodes.Length-1)
+            if (curObstacle == baseNodes.Length - 1)
             {
                 agent.isStopped = true;
                 curState = State.STOP;
@@ -108,27 +111,26 @@ public class Agent : MonoBehaviour
 
     void Jump()
     {
+        print(obstacleBool);
         // only apply set jump velocity when obstacle bool is false
-        if (!obstacleBool)
+        if (!obstacleBool && obstacleTimer.Check(false))
         {
             float jForceMod = Vector3.Distance(transform.position, target.transform.position) / (speed * 0.65f);
 
             vel = new Vector3(Random.Range(-1f, 1f) * imperfection, jumpForce, speed * jForceMod);
 
             vel = Quaternion.LookRotation(target.transform.position - transform.position, Vector3.up) * vel;
+
         }
 
-        vel.y -= gravity * Time.deltaTime;
-        rb.velocity = vel;
-
-        if(obstacleBool && IsGrounded())
+        if (IsGrounded())
         {
-            obstacleBool = false;
-            rb.velocity = Vector3.zero;
-
-            if(transform.position.y < -1)
+            if (transform.position.y < -1)
             {
                 print("Jump failed");
+
+                obstacleBool = false;
+                rb.velocity = Vector3.zero;
 
                 target = baseNodes[curObstacle];
                 rb.isKinematic = true;
@@ -137,23 +139,34 @@ public class Agent : MonoBehaviour
                 return;
             }
 
-            if (path.Count == 0)
+            if (obstacleBool)
             {
-                print("Jump finished");
+                obstacleBool = false;
+                obstacleTimer.Reset();
+                vel = Vector3.zero;
+                rb.velocity = vel;
 
-                target = baseNodes[++curObstacle];
-                rb.isKinematic = true;
-                agent.enabled = true;
-                curState = State.MOVETOOBSTACLE;
+                if (path.Count == 0)
+                {
+                    print("Jump finished");
+
+                    target = baseNodes[++curObstacle];
+                    rb.isKinematic = true;
+                    agent.enabled = true;
+                    curState = State.MOVETOOBSTACLE;
+                    return;
+                }
+
+                target = (DijkNode)path.Dequeue();
+
                 return;
             }
-
-            target = (DijkNode)path.Dequeue();
-
-            return;
         }
 
-        obstacleBool = true;
+        obstacleBool = obstacleBool || (obstacleTimer.IsComplete(false) && !IsGrounded());
+
+        vel.y -= gravity * Time.deltaTime;
+        rb.velocity = vel;
     }
 
     void Skinny()
@@ -162,7 +175,7 @@ public class Agent : MonoBehaviour
 
         if (IsGrounded())
         {
-            if(transform.position.y < -1)
+            if (transform.position.y < -1)
             {
                 print("Skinny failed");
 
@@ -174,7 +187,7 @@ public class Agent : MonoBehaviour
                 return;
             }
 
-            if(dist > stoppingDistance)
+            if (dist > stoppingDistance)
             {
                 vel = new Vector3(Random.Range(-.5f, .5f) * imperfection, 0, speed * Mathf.Clamp(dist / (speed * .3f), stoppingDistance, 1f));
 
@@ -211,7 +224,7 @@ public class Agent : MonoBehaviour
     void Pusher()
     {
         // only move when obstaclebool is true
-        obstacleBool = !(target is ObjectNode node) || (Mathf.Abs(node.obj.position.x) == 7 && node.obj.GetComponent<Pusher>().stall.IsComplete(false)) | obstacleBool;
+        obstacleBool = !(target is ObjectNode node) || (Mathf.Abs(node.obj.position.x) == 7 && node.obj.GetComponent<Pusher>().stall.PercentComplete > .8f) | obstacleBool;
         print(obstacleBool);
         if (IsGrounded())
         {
@@ -271,6 +284,59 @@ public class Agent : MonoBehaviour
         rb.velocity = vel;
     }
 
+    void Paddle()
+    {
+        if (IsGrounded())
+        {
+            if (transform.position.y < -1)
+            {
+                print("Paddle failed");
+
+                rb.velocity = Vector3.zero;
+                target = baseNodes[curObstacle];
+                rb.isKinematic = true;
+                agent.enabled = true;
+                curState = State.MOVETOOBSTACLE;
+                return;
+            }
+
+            if (Vector3.Distance(transform.position, target.transform.position) > stoppingDistance)
+            {
+                NavMeshPath navPath = new NavMeshPath();
+                if (NavMesh.CalculatePath(transform.position, target.transform.position, agent.areaMask, navPath))
+                {
+                    vel = navPath.corners[1] - transform.position;
+                    vel.Normalize();
+                    vel *= speed;
+                }
+                else
+                {
+                    vel = Vector3.zero;
+                }
+            }
+            else
+            {
+                print("Paddle finished");
+
+                vel = Vector3.zero;
+
+                rb.velocity = vel;
+
+                target = baseNodes[++curObstacle];
+                rb.isKinematic = true;
+                agent.enabled = true;
+                curState = State.MOVETOOBSTACLE;
+                return;
+            }
+        }
+        else
+        {
+            vel.y -= gravity * Time.deltaTime;
+        }
+
+        rb.velocity = vel;
+    }
+
     void TrapDoor()
     {
         dist = Vector3.Distance(transform.position, target.transform.position);
@@ -319,7 +385,7 @@ public class Agent : MonoBehaviour
         {
             vel.y -= gravity * Time.deltaTime;
 
-            if (transform.position.y < -1 && Random.value < .5f + (.5f * ((float)difficulty / 2f))) 
+            if (transform.position.y < -1 && Random.value < .5f + (.5f * ((float)difficulty / 2f)))
             {
                 (target as DijkNode).locked = true;
             }
@@ -391,23 +457,6 @@ public class Agent : MonoBehaviour
         rb.velocity = vel;
     }
 
-    private void OnDrawGizmos()
-    {
-        if (curState != State.MOVETOOBSTACLE)
-        {
-            Queue<Node> tmpQueue = new Queue<Node>(path);
-            Vector3 targ = target.transform.position;
-
-            Debug.DrawLine(transform.position, target.transform.position, Color.magenta);
-
-            while (tmpQueue.Count != 0)
-            {
-                Debug.DrawLine(targ, tmpQueue.Peek().transform.position, Color.magenta);
-                targ = tmpQueue.Dequeue().transform.position;
-            }
-        }
-    }
-
     void StartObstacle()
     {
         NavNode node = (NavNode)baseNodes[curObstacle];
@@ -416,6 +465,8 @@ public class Agent : MonoBehaviour
         {
             case 0: // Jump
                 path = CalculatePath((DijkNode)node.nextNode[0], (DijkNode)node.nextNode[node.nextNode.Length - 1], takeExpert);
+                obstacleTimer = new Timer(0.25f * (2 - (int)difficulty));
+                vel = Vector3.zero;
                 break;
             case 1: // Skinny
                 path = new Queue<Node>();
@@ -441,10 +492,13 @@ public class Agent : MonoBehaviour
                     path.Enqueue(node.nextNode[x]);
                 }
                 break;
-            case 3: // Trap
-                path = CalculatePath((DijkNode)node.nextNode[0], (DijkNode)node.nextNode[node.nextNode.Length-1]);
+            case 3: // Paddle
+                path.Enqueue(node.nextNode[0]);
                 break;
-            case 4: // Wrecker
+            case 4: // Trap
+                path = CalculatePath((DijkNode)node.nextNode[0], (DijkNode)node.nextNode[node.nextNode.Length - 1]);
+                break;
+            case 5: // Wrecker
                 path = new Queue<Node>();
                 for (int x = 0; x < node.nextNode.Length; ++x)
                 {
@@ -466,7 +520,7 @@ public class Agent : MonoBehaviour
 
         while (openList.Count != 0)
         {
-            if(openList[0] == targetNode)
+            if (openList[0] == targetNode)
             {
                 break;
             }
@@ -520,7 +574,7 @@ public class Agent : MonoBehaviour
             }
         }
 
-        if(targetNode.prevNode == null)
+        if (targetNode.prevNode == null)
         {
             curState = State.STOP;
             return null;
@@ -531,11 +585,11 @@ public class Agent : MonoBehaviour
 
         tmpPath.Add(targetNode);
 
-        while(tmpPath[0].prevNode != null)
+        while (tmpPath[0].prevNode != null)
         {
             tmpPath.Insert(0, tmpPath[0].prevNode);
         }
-        for(int x = 0; x < tmpPath.Count; ++x)
+        for (int x = 0; x < tmpPath.Count; ++x)
         {
             finPath.Enqueue(tmpPath[x]);
         }
@@ -555,5 +609,47 @@ public class Agent : MonoBehaviour
     bool IsGrounded()
     {
         return Physics.Raycast(transform.position, Vector3.down, agent.height / 1.9f);
+    }
+
+    public void AlterDifficulty()
+    {
+        switch (difficulty)
+        {
+            case AIDifficulty.Beginner:
+                difficulty = AIDifficulty.Intermediate;
+                speed = 9f;
+                agent.speed = 9f;
+                imperfection = 2.5f;
+                break;
+            case AIDifficulty.Intermediate:
+                difficulty = AIDifficulty.Expert;
+                speed = 10f;
+                agent.speed = 10f;
+                imperfection = 2f;
+                break;
+            case AIDifficulty.Expert:
+                difficulty = AIDifficulty.Beginner;
+                speed = 8f;
+                agent.speed = 8f;
+                imperfection = 2.6f;
+                break;
+        }
+    }
+
+    private void OnDrawGizmos()
+    {
+        if (curState != State.MOVETOOBSTACLE && curState != State.STOP)
+        {
+            Queue<Node> tmpQueue = new Queue<Node>(path);
+            Vector3 targ = target.transform.position;
+
+            Debug.DrawLine(transform.position, target.transform.position, Color.magenta);
+
+            while (tmpQueue.Count != 0)
+            {
+                Debug.DrawLine(targ, tmpQueue.Peek().transform.position, Color.magenta);
+                targ = tmpQueue.Dequeue().transform.position;
+            }
+        }
     }
 }

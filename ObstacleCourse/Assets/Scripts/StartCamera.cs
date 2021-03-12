@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class StartCamera : MonoBehaviour
 {
@@ -13,8 +11,8 @@ public class StartCamera : MonoBehaviour
 
     private void FixedUpdate()
     {
-        transform.position = new Vector3(center.position.x + (semiMajor * Mathf.Sin(Mathf.Deg2Rad * alpha)), 
-                                         transform.position.y, 
+        transform.position = new Vector3(center.position.x + (semiMajor * Mathf.Sin(Mathf.Deg2Rad * alpha)),
+                                         transform.position.y,
                                          center.position.z + (semiMinor * Mathf.Cos(Mathf.Deg2Rad * alpha)));
 
         transform.forward = center.position - transform.position;

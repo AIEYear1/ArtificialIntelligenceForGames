@@ -1,20 +1,21 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
+using UnityEngine.UI;
 
 public class Goal : MonoBehaviour
 {
+    public GameObject endCamera = null;
+    public GameObject endMenu = null;
+    public GameObject mainOverlay = null;
+    public Text endText = null;
+
     private void OnTriggerEnter(Collider other)
     {
-        switch (other.tag)
-        {
-            case "Player":
+        Cursor.lockState = CursorLockMode.None;
+        endText.text = other.name + " Wins";
 
-                break;
-            case "AI":
-
-                break;
-        }
+        mainOverlay.SetActive(false);
+        endMenu.SetActive(true);
+        endCamera.SetActive(true);
 
         Destroy(gameObject);
     }

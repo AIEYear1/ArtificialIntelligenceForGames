@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class DijkNode : Node
 {
@@ -15,7 +13,7 @@ public class DijkNode : Node
 
     public DijkNode prevNode = null;
 
-    public void  SetScores(DijkNode targetNode)
+    public void SetScores(DijkNode targetNode)
     {
         gScore = baseGScore + ((prevNode == null) ? 0 : prevNode.gScore);
 

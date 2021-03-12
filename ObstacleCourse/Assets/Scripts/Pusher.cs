@@ -1,6 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 
 public class Pusher : MonoBehaviour
 {
@@ -24,7 +22,7 @@ public class Pusher : MonoBehaviour
     private void FixedUpdate()
     {
         if (moveRight) pos.x = Mathf.Lerp(LerpVals.x, LerpVals.y, mover.PercentComplete);
-        else  pos.x = Mathf.Lerp(LerpVals.y, LerpVals.x, mover.PercentComplete);
+        else pos.x = Mathf.Lerp(LerpVals.y, LerpVals.x, mover.PercentComplete);
 
         if (mover.Check(false) && stall.Check())
         {
