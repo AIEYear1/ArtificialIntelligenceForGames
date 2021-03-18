@@ -6,7 +6,10 @@ public class Goal : MonoBehaviour
     public GameObject endCamera = null;
     public GameObject endMenu = null;
     public GameObject mainOverlay = null;
+    public GameObject fireWorks = null;
     public Text endText = null;
+
+    public AudioListener playerListener = null;
 
     private void OnTriggerEnter(Collider other)
     {
@@ -14,9 +17,11 @@ public class Goal : MonoBehaviour
         Cursor.visible = true;
         endText.text = other.name + " Wins";
 
+        playerListener.enabled = false;
         mainOverlay.SetActive(false);
         endMenu.SetActive(true);
         endCamera.SetActive(true);
+        fireWorks.SetActive(true);
 
         Destroy(gameObject);
     }

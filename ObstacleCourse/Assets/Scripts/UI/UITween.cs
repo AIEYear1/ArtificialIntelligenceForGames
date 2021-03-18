@@ -17,6 +17,7 @@ public class UITween : MonoBehaviour
     GameObject menu = null;
     GameObject cam = null;
     GameObject overlay = null;
+    AudioListener playerListener = null;
 
     public void OnEnable()
     {
@@ -32,11 +33,13 @@ public class UITween : MonoBehaviour
         }
     }
 
-    public void Close(GameObject relatedMenu, GameObject relatedCam, GameObject mainOverlay)
+    public void Close(GameObject relatedMenu, GameObject relatedCam, GameObject mainOverlay, AudioListener pListener)
     {
+
         menu = relatedMenu;
         cam = relatedCam;
         overlay = mainOverlay;
+        playerListener = pListener;
 
         for (int x = 0; x < elements.Length; ++x)
         {
@@ -48,6 +51,7 @@ public class UITween : MonoBehaviour
     }
     public void End()
     {
+        playerListener.enabled = true;
         music.ChangeSong();
         menu.SetActive(false);
         cam.SetActive(false);

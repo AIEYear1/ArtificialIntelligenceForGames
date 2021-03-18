@@ -9,9 +9,11 @@ public class StartButton : MonoBehaviour
 
     public GameObject startCamera = null;
 
+    public AudioListener playerListener = null;
+
     public void Begin()
     {
-        tweener.Close(startMenu, startCamera, mainOverlay);
+        tweener.Close(startMenu, startCamera, mainOverlay, playerListener);
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
