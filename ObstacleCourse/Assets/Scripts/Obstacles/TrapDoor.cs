@@ -61,8 +61,6 @@ public class TrapDoor : MonoBehaviour
             }
             path = CalculatePath((DijkNode)startNode.nextNode[0], (DijkNode)startNode.nextNode[startNode.nextNode.Length - 1]);
         }
-
-        print(attempts);
     }
     Queue<Node> CalculatePath(DijkNode startNode, DijkNode targetNode, bool calcShortest = true, bool useAStar = true)
     {
